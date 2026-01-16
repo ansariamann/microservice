@@ -1,0 +1,132 @@
+version: "3.8"
+
+services:
+  # Test databases
+  test-user-db:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_DB: test_userdb
+      POSTGRES_USER: testuser
+      POSTGRES_PASSWORD: testpass
+    ports:
+      - "5433:5432"
+    volumes:
+      - test_user_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U testuser -d test_userdb"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  test-task-db:
+    image: mongo:7-jammy
+    environment:
+      MONGO_INITDB_DATABASE: test_taskdb
+    ports:
+      - "27018:27017"
+    volumes:
+      - test_task_data:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Test services
+  test-user-service:
+    build:
+      context: ./user-service
+      dockerfile: Dockerfile
+    environment:
+      - DATABASE_URL=postgresql://testuser:testpass@test-user-db:5432/test_userdb
+      - JWT_SECRET=test-jwt-secret-key-for-testing-only
+      - ENVIRONMENT=test
+    ports:
+      - "8001:8001"
+    depends_on:
+      test-user-db:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8001/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  test-task-service:
+    build:
+      context: ./task-service
+      dockerfile: Dockerfile
+    environment:
+      - MONGODB_URL=mongodb://test-task-db:27017/test_taskdb
+      - JWT_SECRET=test-jwt-secret-key-for-testing-only
+      - NOTIFICATION_SERVICE_URL=http://test-notification-service:8003
+      - ENVIRONMENT=test
+    ports:
+      - "8002:8002"
+    depends_on:
+      test-task-db:
+        condition: service_healthy
+      test-notification-service:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8002/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  test-notification-service:
+    build:
+      context: ./notification-service
+      dockerfile: Dockerfile
+    environment:
+      - DATABASE_URL=sqlite:///test_notifications.db
+      - JWT_SECRET=test-jwt-secret-key-for-testing-only
+      - ENVIRONMENT=test
+    ports:
+      - "8003:8003"
+    volumes:
+      - test_notification_data:/app/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8003/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Test runner service
+  test-runner:
+    build:
+      context: .
+      dockerfile: Dockerfile.test
+    environment:
+      - USER_SERVICE_URL=http://test-user-service:8001
+      - TASK_SERVICE_URL=http://test-task-service:8002
+      - NOTIFICATION_SERVICE_URL=http://test-notification-service:8003
+    depends_on:
+      test-user-service:
+        condition: service_healthy
+      test-task-service:
+        condition: service_healthy
+      test-notification-service:
+        condition: service_healthy
+    volumes:
+      - ./tests:/app/tests
+      - ./test-results:/app/test-results
+      - ./coverage-reports:/app/coverage-reports
+    command:
+      [
+        "python",
+        "-m",
+        "pytest",
+        "/app/tests/integration",
+        "-v",
+        "--html=/app/test-results/integration-report.html",
+      ]
+
+volumes:
+  test_user_data:
+  test_task_data:
+  test_notification_data:
+
+networks:
+  default:
+    name: test-network

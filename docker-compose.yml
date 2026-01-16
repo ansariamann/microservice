@@ -1,0 +1,172 @@
+version: "3.8"
+
+services:
+  # Databases
+  user-db:
+    image: postgres:15-alpine
+    container_name: task-mgmt-user-db
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - user_db_data:/var/lib/postgresql/data
+    ports:
+      - "${POSTGRES_PORT}:5432"
+    networks:
+      - task-management-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    restart: unless-stopped
+
+  task-db:
+    image: mongo:7.0
+    container_name: task-mgmt-task-db
+    environment:
+      MONGO_INITDB_DATABASE: ${MONGODB_DATABASE}
+    volumes:
+      - task_db_data:/data/db
+    ports:
+      - "${MONGODB_PORT}:27017"
+    networks:
+      - task-management-network
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    restart: unless-stopped
+
+  # Backend Services
+  user-service:
+    build: ./user-service
+    container_name: task-mgmt-user-service
+    ports:
+      - "${USER_SERVICE_PORT}:8001"
+    environment:
+      - DATABASE_URL=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@user-db:5432/${POSTGRES_DB}
+      - JWT_SECRET=${JWT_SECRET}
+      - JWT_ALGORITHM=${JWT_ALGORITHM}
+      - JWT_EXPIRATION_HOURS=${JWT_EXPIRATION_HOURS}
+      - SERVICE_PORT=${USER_SERVICE_PORT}
+      - DEBUG=${DEBUG}
+      - LOG_LEVEL=${LOG_LEVEL}
+      - LOG_FORMAT=${LOG_FORMAT}
+      - ALLOWED_ORIGINS=${ALLOWED_ORIGINS}
+    depends_on:
+      user-db:
+        condition: service_healthy
+    volumes:
+      - ./shared:/app/shared
+    networks:
+      - task-management-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8001/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    restart: unless-stopped
+
+  task-service:
+    build: ./task-service
+    container_name: task-mgmt-task-service
+    ports:
+      - "${TASK_SERVICE_PORT}:8002"
+    environment:
+      - MONGODB_URL=mongodb://task-db:27017/${MONGODB_DATABASE}
+      - JWT_SECRET=${JWT_SECRET}
+      - JWT_ALGORITHM=${JWT_ALGORITHM}
+      - JWT_EXPIRATION_HOURS=${JWT_EXPIRATION_HOURS}
+      - SERVICE_PORT=${TASK_SERVICE_PORT}
+      - DEBUG=${DEBUG}
+      - LOG_LEVEL=${LOG_LEVEL}
+      - LOG_FORMAT=${LOG_FORMAT}
+      - ALLOWED_ORIGINS=${ALLOWED_ORIGINS}
+      - NOTIFICATION_SERVICE_URL=http://notification-service:8003
+      - USER_SERVICE_URL=http://user-service:8001
+    depends_on:
+      task-db:
+        condition: service_healthy
+      notification-service:
+        condition: service_healthy
+    volumes:
+      - ./shared:/app/shared
+    networks:
+      - task-management-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8002/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    restart: unless-stopped
+
+  notification-service:
+    build: ./notification-service
+    container_name: task-mgmt-notification-service
+    ports:
+      - "${NOTIFICATION_SERVICE_PORT}:8003"
+    environment:
+      - DATABASE_URL=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@user-db:5432/${POSTGRES_DB}
+      - JWT_SECRET=${JWT_SECRET}
+      - JWT_ALGORITHM=${JWT_ALGORITHM}
+      - JWT_EXPIRATION_HOURS=${JWT_EXPIRATION_HOURS}
+      - SERVICE_PORT=${NOTIFICATION_SERVICE_PORT}
+      - DEBUG=${DEBUG}
+      - LOG_LEVEL=${LOG_LEVEL}
+      - LOG_FORMAT=${LOG_FORMAT}
+      - ALLOWED_ORIGINS=${ALLOWED_ORIGINS}
+    depends_on:
+      user-db:
+        condition: service_healthy
+    volumes:
+      - ./shared:/app/shared
+    networks:
+      - task-management-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8003/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    restart: unless-stopped
+
+  # Frontend
+  frontend:
+    build: ./frontend
+    container_name: task-mgmt-frontend
+    ports:
+      - "${FRONTEND_PORT}:3000"
+    environment:
+      - REACT_APP_API_BASE_URL=${REACT_APP_API_BASE_URL}
+      - REACT_APP_USER_SERVICE_URL=${REACT_APP_USER_SERVICE_URL}
+      - REACT_APP_TASK_SERVICE_URL=${REACT_APP_TASK_SERVICE_URL}
+      - REACT_APP_NOTIFICATION_SERVICE_URL=${REACT_APP_NOTIFICATION_SERVICE_URL}
+    depends_on:
+      user-service:
+        condition: service_healthy
+      task-service:
+        condition: service_healthy
+      notification-service:
+        condition: service_healthy
+    networks:
+      - task-management-network
+    restart: unless-stopped
+
+volumes:
+  # Database volumes for data persistence
+  user_db_data:
+    driver: local
+  task_db_data:
+    driver: local
+  notification_data:
+    driver: local
+
+networks:
+  # Custom network for service communication
+  task-management-network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16

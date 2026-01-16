@@ -1,0 +1,435 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+
+env:
+  COVERAGE_THRESHOLD: 80
+
+jobs:
+  # Backend Services Tests
+  test-user-service:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:15-alpine
+        env:
+          POSTGRES_PASSWORD: testpass
+          POSTGRES_USER: testuser
+          POSTGRES_DB: test_userdb
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.11"
+
+      - name: Cache pip dependencies
+        uses: actions/cache@v3
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-user-service-${{ hashFiles('user-service/requirements.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-user-service-
+
+      - name: Install dependencies
+        working-directory: ./user-service
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Run tests with coverage
+        working-directory: ./user-service
+        env:
+          DATABASE_URL: postgresql://testuser:testpass@localhost:5432/test_userdb
+          JWT_SECRET: test-jwt-secret-key-for-ci
+        run: |
+          pytest tests/ \
+            --cov=app \
+            --cov-report=xml:coverage.xml \
+            --cov-report=html:coverage-html \
+            --cov-report=term-missing \
+            --cov-fail-under=${{ env.COVERAGE_THRESHOLD }} \
+            --html=test-report.html \
+            --self-contained-html \
+            --junitxml=junit.xml \
+            -v
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v3
+        with:
+          file: ./user-service/coverage.xml
+          flags: user-service
+          name: user-service-coverage
+
+      - name: Upload test results
+        uses: actions/upload-artifact@v3
+        if: always()
+        with:
+          name: user-service-test-results
+          path: |
+            user-service/test-report.html
+            user-service/junit.xml
+            user-service/coverage-html/
+
+  test-task-service:
+    runs-on: ubuntu-latest
+    services:
+      mongodb:
+        image: mongo:7-jammy
+        env:
+          MONGO_INITDB_DATABASE: test_taskdb
+        options: >-
+          --health-cmd "mongosh --eval 'db.adminCommand(\"ping\")'"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 27017:27017
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.11"
+
+      - name: Cache pip dependencies
+        uses: actions/cache@v3
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-task-service-${{ hashFiles('task-service/requirements.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-task-service-
+
+      - name: Install dependencies
+        working-directory: ./task-service
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Run tests with coverage
+        working-directory: ./task-service
+        env:
+          MONGODB_URL: mongodb://localhost:27017/test_taskdb
+          JWT_SECRET: test-jwt-secret-key-for-ci
+          NOTIFICATION_SERVICE_URL: http://localhost:8003
+        run: |
+          pytest tests/ \
+            --cov=app \
+            --cov-report=xml:coverage.xml \
+            --cov-report=html:coverage-html \
+            --cov-report=term-missing \
+            --cov-fail-under=${{ env.COVERAGE_THRESHOLD }} \
+            --html=test-report.html \
+            --self-contained-html \
+            --junitxml=junit.xml \
+            -v
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v3
+        with:
+          file: ./task-service/coverage.xml
+          flags: task-service
+          name: task-service-coverage
+
+      - name: Upload test results
+        uses: actions/upload-artifact@v3
+        if: always()
+        with:
+          name: task-service-test-results
+          path: |
+            task-service/test-report.html
+            task-service/junit.xml
+            task-service/coverage-html/
+
+  test-notification-service:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.11"
+
+      - name: Cache pip dependencies
+        uses: actions/cache@v3
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-notification-service-${{ hashFiles('notification-service/requirements.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-notification-service-
+
+      - name: Install dependencies
+        working-directory: ./notification-service
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Run tests with coverage
+        working-directory: ./notification-service
+        env:
+          DATABASE_URL: sqlite:///test_notifications.db
+          JWT_SECRET: test-jwt-secret-key-for-ci
+        run: |
+          pytest tests/ \
+            --cov=app \
+            --cov-report=xml:coverage.xml \
+            --cov-report=html:coverage-html \
+            --cov-report=term-missing \
+            --cov-fail-under=${{ env.COVERAGE_THRESHOLD }} \
+            --html=test-report.html \
+            --self-contained-html \
+            --junitxml=junit.xml \
+            -v
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v3
+        with:
+          file: ./notification-service/coverage.xml
+          flags: notification-service
+          name: notification-service-coverage
+
+      - name: Upload test results
+        uses: actions/upload-artifact@v3
+        if: always()
+        with:
+          name: notification-service-test-results
+          path: |
+            notification-service/test-report.html
+            notification-service/junit.xml
+            notification-service/coverage-html/
+
+  # Frontend Tests
+  test-frontend:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "18"
+          cache: "npm"
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies
+        working-directory: ./frontend
+        run: npm ci
+
+      - name: Run tests with coverage
+        working-directory: ./frontend
+        run: npm run test:coverage
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v3
+        with:
+          file: ./frontend/coverage/lcov.info
+          flags: frontend
+          name: frontend-coverage
+
+      - name: Upload test results
+        uses: actions/upload-artifact@v3
+        if: always()
+        with:
+          name: frontend-test-results
+          path: |
+            frontend/coverage/
+
+  # Integration Tests
+  integration-tests:
+    runs-on: ubuntu-latest
+    needs:
+      [
+        test-user-service,
+        test-task-service,
+        test-notification-service,
+        test-frontend,
+      ]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r user-service/requirements.txt
+          pip install -r task-service/requirements.txt
+          pip install -r notification-service/requirements.txt
+
+      - name: Start services for integration tests
+        run: |
+          docker-compose -f docker-compose.test.yml up -d --build
+          sleep 60  # Wait for services to be ready
+
+      - name: Run integration tests
+        working-directory: ./tests/integration
+        run: |
+          python -m pytest . \
+            --html=../../test-results/integration-report.html \
+            --self-contained-html \
+            --junitxml=../../test-results/integration-junit.xml \
+            -v
+
+      - name: Stop services
+        if: always()
+        run: docker-compose -f docker-compose.test.yml down -v
+
+      - name: Upload integration test results
+        uses: actions/upload-artifact@v3
+        if: always()
+        with:
+          name: integration-test-results
+          path: test-results/
+
+  # Generate Combined Coverage Report
+  coverage-report:
+    runs-on: ubuntu-latest
+    needs:
+      [
+        test-user-service,
+        test-task-service,
+        test-notification-service,
+        test-frontend,
+      ]
+    if: always()
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.11"
+
+      - name: Download all coverage artifacts
+        uses: actions/download-artifact@v3
+        with:
+          path: artifacts/
+
+      - name: Organize coverage files
+        run: |
+          mkdir -p coverage-reports
+          # Copy Python coverage files
+          cp artifacts/user-service-test-results/coverage.xml user-service/coverage.xml || true
+          cp artifacts/task-service-test-results/coverage.xml task-service/coverage.xml || true
+          cp artifacts/notification-service-test-results/coverage.xml notification-service/coverage.xml || true
+          # Copy frontend coverage
+          cp -r artifacts/frontend-test-results/coverage frontend/ || true
+
+      - name: Generate combined coverage report
+        run: |
+          python scripts/generate-coverage-report.py --output-dir coverage-reports --threshold ${{ env.COVERAGE_THRESHOLD }}
+
+      - name: Upload combined coverage report
+        uses: actions/upload-artifact@v3
+        with:
+          name: combined-coverage-report
+          path: coverage-reports/
+
+      - name: Comment coverage on PR
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const fs = require('fs');
+            try {
+              const coverageData = JSON.parse(fs.readFileSync('coverage-reports/combined-coverage-report.json', 'utf8'));
+              const overallCoverage = coverageData.overall_coverage.line_rate.toFixed(1);
+              const branchCoverage = coverageData.overall_coverage.branch_rate.toFixed(1);
+              
+              const comment = `## 📊 Coverage Report
+              
+              **Overall Coverage:** ${overallCoverage}% lines, ${branchCoverage}% branches
+              
+              | Service | Line Coverage | Branch Coverage |
+              |---------|---------------|-----------------|
+              ${Object.entries(coverageData.services).map(([name, data]) => 
+                `| ${name} | ${data.line_rate?.toFixed(1) || 'N/A'}% | ${data.branch_rate?.toFixed(1) || 'N/A'}% |`
+              ).join('\n')}
+              
+              ${overallCoverage >= ${{ env.COVERAGE_THRESHOLD }} ? '✅ Coverage meets threshold' : '❌ Coverage below threshold'}
+              `;
+              
+              github.rest.issues.createComment({
+                issue_number: context.issue.number,
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                body: comment
+              });
+            } catch (error) {
+              console.log('Could not post coverage comment:', error);
+            }
+
+  # Build and Test Docker Images
+  docker-build:
+    runs-on: ubuntu-latest
+    needs: [integration-tests]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build user service image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./user-service
+          push: false
+          tags: user-service:test
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Build task service image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./task-service
+          push: false
+          tags: task-service:test
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Build notification service image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./notification-service
+          push: false
+          tags: notification-service:test
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Build frontend image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./frontend
+          push: false
+          tags: frontend:test
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Test Docker Compose
+        run: |
+          docker-compose -f docker-compose.yml config
+          echo "Docker Compose configuration is valid"

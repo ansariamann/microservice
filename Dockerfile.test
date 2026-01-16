@@ -1,0 +1,39 @@
+# Test Runner Dockerfile
+FROM python:3.11-slim
+
+# Set working directory
+WORKDIR /app
+
+# Install system dependencies
+RUN apt-get update && apt-get install -y \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy requirements from all services
+COPY user-service/requirements.txt /tmp/user-requirements.txt
+COPY task-service/requirements.txt /tmp/task-requirements.txt
+COPY notification-service/requirements.txt /tmp/notification-requirements.txt
+
+# Install Python dependencies
+RUN pip install --no-cache-dir \
+    -r /tmp/user-requirements.txt \
+    -r /tmp/task-requirements.txt \
+    -r /tmp/notification-requirements.txt \
+    pytest-html \
+    pytest-cov \
+    pytest-xdist
+
+# Copy shared utilities
+COPY shared/ /app/shared/
+
+# Copy test files
+COPY tests/ /app/tests/
+
+# Create directories for test results
+RUN mkdir -p /app/test-results /app/coverage-reports
+
+# Set Python path
+ENV PYTHONPATH=/app
+
+# Default command
+CMD ["python", "-m", "pytest", "/app/tests", "-v"]

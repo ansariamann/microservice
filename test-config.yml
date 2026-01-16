@@ -1,0 +1,230 @@
+# Test Configuration for Microservices Task Management System
+# This file defines test settings, thresholds, and environment configurations
+
+# Global test settings
+global:
+  coverage_threshold: 80
+  test_timeout: 300 # 5 minutes
+  parallel_workers: 4
+  retry_attempts: 3
+
+# Service-specific configurations
+services:
+  user-service:
+    type: python
+    test_directory: user-service/tests
+    coverage_target: app
+    database:
+      type: postgresql
+      test_url: postgresql://testuser:testpass@localhost:5433/test_userdb
+    environment:
+      JWT_SECRET: test-jwt-secret-key
+      ENVIRONMENT: test
+    dependencies:
+      - postgresql
+    coverage_threshold: 85 # Higher threshold for user service
+
+  task-service:
+    type: python
+    test_directory: task-service/tests
+    coverage_target: app
+    database:
+      type: mongodb
+      test_url: mongodb://localhost:27018/test_taskdb
+    environment:
+      JWT_SECRET: test-jwt-secret-key
+      NOTIFICATION_SERVICE_URL: http://localhost:8003
+      ENVIRONMENT: test
+    dependencies:
+      - mongodb
+      - notification-service
+    coverage_threshold: 80
+
+  notification-service:
+    type: python
+    test_directory: notification-service/tests
+    coverage_target: app
+    database:
+      type: sqlite
+      test_url: sqlite:///test_notifications.db
+    environment:
+      JWT_SECRET: test-jwt-secret-key
+      ENVIRONMENT: test
+    dependencies: []
+    coverage_threshold: 80
+
+  frontend:
+    type: javascript
+    test_directory: frontend/src
+    coverage_target: src
+    environment:
+      REACT_APP_API_BASE_URL: http://localhost:8080
+      NODE_ENV: test
+    dependencies: []
+    coverage_threshold: 75 # Slightly lower for frontend
+
+# Integration test configuration
+integration:
+  test_directory: tests/integration
+  services_required:
+    - user-service
+    - task-service
+    - notification-service
+  environment:
+    USER_SERVICE_URL: http://localhost:8001
+    TASK_SERVICE_URL: http://localhost:8002
+    NOTIFICATION_SERVICE_URL: http://localhost:8003
+  setup_timeout: 60 # Time to wait for services to start
+  test_timeout: 600 # 10 minutes for integration tests
+
+# Docker test environment
+docker:
+  compose_file: docker-compose.test.yml
+  services:
+    test-user-db:
+      image: postgres:15-alpine
+      ports: ["5433:5432"]
+      health_check: pg_isready
+    test-task-db:
+      image: mongo:7-jammy
+      ports: ["27018:27017"]
+      health_check: mongosh --eval "db.adminCommand('ping')"
+    test-user-service:
+      build: ./user-service
+      ports: ["8001:8001"]
+      depends_on: [test-user-db]
+    test-task-service:
+      build: ./task-service
+      ports: ["8002:8002"]
+      depends_on: [test-task-db, test-notification-service]
+    test-notification-service:
+      build: ./notification-service
+      ports: ["8003:8003"]
+
+# CI/CD configuration
+ci:
+  triggers:
+    - push: [main, develop]
+    - pull_request: [main, develop]
+
+  stages:
+    - name: unit-tests
+      parallel: true
+      jobs:
+        - test-user-service
+        - test-task-service
+        - test-notification-service
+        - test-frontend
+
+    - name: integration-tests
+      depends_on: unit-tests
+      jobs:
+        - integration-tests
+
+    - name: coverage-report
+      depends_on: unit-tests
+      jobs:
+        - generate-coverage-report
+
+    - name: docker-build
+      depends_on: integration-tests
+      jobs:
+        - build-docker-images
+
+# Coverage reporting
+coverage:
+  formats:
+    - html
+    - xml
+    - json
+    - lcov
+
+  output_directory: coverage-reports
+
+  thresholds:
+    global:
+      line: 80
+      branch: 75
+      function: 80
+
+    per_service:
+      user-service:
+        line: 85
+        branch: 80
+      task-service:
+        line: 80
+        branch: 75
+      notification-service:
+        line: 80
+        branch: 75
+      frontend:
+        line: 75
+        branch: 70
+
+# Test data management
+test_data:
+  factories:
+    enabled: true
+    module: shared.test_factories
+
+  cleanup:
+    enabled: true
+    module: shared.test_cleanup
+    strategy: per_test # Options: per_test, per_suite, manual
+
+  fixtures:
+    user_data: shared/fixtures/users.json
+    task_data: shared/fixtures/tasks.json
+    notification_data: shared/fixtures/notifications.json
+
+# Reporting
+reporting:
+  formats:
+    - html
+    - junit
+    - json
+
+  output_directory: test-results
+
+  notifications:
+    slack:
+      enabled: false
+      webhook_url: ${SLACK_WEBHOOK_URL}
+      channels:
+        - "#ci-cd"
+
+    email:
+      enabled: false
+      recipients:
+        - "dev-team@company.com"
+
+# Performance testing
+performance:
+  enabled: false
+  tools:
+    - locust
+
+  scenarios:
+    - name: user_registration_load
+      target: user-service
+      users: 100
+      spawn_rate: 10
+      duration: 300
+
+    - name: task_crud_load
+      target: task-service
+      users: 50
+      spawn_rate: 5
+      duration: 300
+
+# Security testing
+security:
+  enabled: false
+  tools:
+    - bandit # Python security linter
+    - npm-audit # Node.js security audit
+
+  scans:
+    - dependency_check
+    - static_analysis
+    - secrets_detection

@@ -1,0 +1,200 @@
+version: "3.8"
+
+# Development-specific Docker Compose configuration
+# Use with: docker-compose -f docker-compose.yml -f docker-compose.dev.yml up
+
+services:
+  # Development overrides for databases
+  user-db:
+    ports:
+      - "5432:5432" # Expose database ports for development access
+    environment:
+      - POSTGRES_DB=userdb_dev
+    volumes:
+      - user_db_dev_data:/var/lib/postgresql/data
+      - ./scripts/init-db.sh:/docker-entrypoint-initdb.d/init-db.sh
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d userdb_dev"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+        labels: "service=user-db,environment=development"
+
+  task-db:
+    ports:
+      - "27017:27017" # Expose database ports for development access
+    environment:
+      MONGO_INITDB_DATABASE: taskdb_dev
+    volumes:
+      - task_db_dev_data:/data/db
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+        labels: "service=task-db,environment=development"
+
+  # Development overrides for backend services
+  user-service:
+    environment:
+      - DATABASE_URL=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@user-db:5432/userdb_dev
+      - DEBUG=true
+      - LOG_LEVEL=DEBUG
+      - LOG_FORMAT=pretty
+      - ENVIRONMENT=development
+      - PYTHONPATH=/app:/app/shared:/app/shared
+    volumes:
+      - ./user-service:/app # Mount source code for hot reload
+      - ./shared:/app/shared
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8001/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+        labels: "service=user-service,environment=development"
+    command:
+      [
+        "python",
+        "-m",
+        "uvicorn",
+        "app.main:app",
+        "--host",
+        "0.0.0.0",
+        "--port",
+        "8001",
+        "--reload",
+      ]
+
+  task-service:
+    environment:
+      - MONGODB_URL=mongodb://task-db:27017/taskdb_dev
+      - DEBUG=true
+      - LOG_LEVEL=DEBUG
+      - LOG_FORMAT=pretty
+      - ENVIRONMENT=development
+      - PYTHONPATH=/app:/app/shared:/app/shared
+      - PYTHONPATH=/app:/app/shared
+    volumes:
+      - ./task-service:/app # Mount source code for hot reload
+      - ./shared:/app/shared
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8002/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+        labels: "service=task-service,environment=development"
+    command:
+      [
+        "python",
+        "-m",
+        "uvicorn",
+        "app.main:app",
+        "--host",
+        "0.0.0.0",
+        "--port",
+        "8002",
+        "--reload",
+      ]
+
+  notification-service:
+    environment:
+      - DATABASE_URL=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@user-db:5432/notificationdb_dev
+      - DEBUG=true
+      - LOG_LEVEL=DEBUG
+      - LOG_FORMAT=pretty
+      - ENVIRONMENT=development
+      - PYTHONPATH=/app
+    volumes:
+      - ./notification-service:/app # Mount source code for hot reload
+      - ./shared:/app/shared
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8003/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+        labels: "service=notification-service,environment=development"
+    command:
+      [
+        "python",
+        "-m",
+        "uvicorn",
+        "app.main:app",
+        "--host",
+        "0.0.0.0",
+        "--port",
+        "8003",
+        "--reload",
+      ]
+
+  # Development frontend with hot reload
+  frontend:
+    environment:
+      - NODE_ENV=development
+      - REACT_APP_API_BASE_URL=http://localhost:8080
+      - ENVIRONMENT=development
+    volumes:
+      - ./frontend:/app # Mount source code for hot reload
+      - /app/node_modules # Prevent overwriting node_modules
+    restart: unless-stopped
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "wget",
+          "--quiet",
+          "--tries=1",
+          "--spider",
+          "http://localhost:3000",
+        ]
+      interval: 60s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+        labels: "service=frontend,environment=development"
+    command: ["npm", "run", "dev"]
+
+volumes:
+  user_db_dev_data:
+    driver: local
+  task_db_dev_data:
+    driver: local

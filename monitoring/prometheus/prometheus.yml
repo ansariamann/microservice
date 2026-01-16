@@ -1,0 +1,55 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+rule_files:
+  # - "first_rules.yml"
+  # - "second_rules.yml"
+
+scrape_configs:
+  # Prometheus itself
+  - job_name: "prometheus"
+    static_configs:
+      - targets: ["localhost:9090"]
+
+  # Node Exporter for system metrics
+  - job_name: "node-exporter"
+    static_configs:
+      - targets: ["node-exporter:9100"]
+
+  # cAdvisor for container metrics
+  - job_name: "cadvisor"
+    static_configs:
+      - targets: ["cadvisor:8080"]
+
+  # Nginx metrics
+  - job_name: "nginx"
+    static_configs:
+      - targets: ["nginx:80"]
+    metrics_path: "/nginx_status"
+    scrape_interval: 30s
+
+  # Application health checks
+  - job_name: "user-service"
+    static_configs:
+      - targets: ["user-service:8001"]
+    metrics_path: "/health"
+    scrape_interval: 30s
+
+  - job_name: "task-service"
+    static_configs:
+      - targets: ["task-service:8002"]
+    metrics_path: "/health"
+    scrape_interval: 30s
+
+  - job_name: "notification-service"
+    static_configs:
+      - targets: ["notification-service:8003"]
+    metrics_path: "/health"
+    scrape_interval: 30s
+
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets:
+          # - alertmanager:9093
