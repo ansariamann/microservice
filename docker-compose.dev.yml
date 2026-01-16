@@ -163,6 +163,9 @@ services:
 
   # Development frontend with hot reload
   frontend:
+    build:
+      context: ./frontend
+      target: build
     environment:
       - NODE_ENV=development
       - REACT_APP_API_BASE_URL=http://localhost:8080
