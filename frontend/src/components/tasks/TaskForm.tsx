@@ -9,7 +9,10 @@ import { taskService } from "../../services/taskService";
 import { useAsync } from "../../hooks/useAsync";
 import ErrorMessage from "../common/ErrorMessage";
 import LoadingSpinner from "../common/LoadingSpinner";
+import GlassCard from "../common/GlassCard";
+import AnimatedButton from "../common/AnimatedButton";
 import { XMarkIcon } from "@heroicons/react/24/outline";
+import { motion } from "framer-motion";
 
 interface TaskFormProps {
   task?: Task;
@@ -129,231 +132,165 @@ const TaskForm: React.FC<TaskFormProps> = ({ task, onSubmit, onCancel }) => {
 
   const getInputClasses = (fieldName: string) => {
     const hasError = errors[fieldName];
-    return `w-full border rounded-md px-3 py-2 focus:outline-none focus:ring-2 transition-colors ${
-      hasError
-        ? "border-red-300 focus:ring-red-500 focus:border-red-500"
-        : "border-gray-300 focus:ring-blue-500 focus:border-blue-500"
-    }`;
+    return `w-full bg-surface/50 border ${hasError ? "border-red-500/50 focus:ring-red-500" : "border-white/10 focus:ring-primary"
+      } rounded-lg px-3 py-2 text-white placeholder-gray-400 focus:outline-none focus:ring-2 transition-all duration-300 backdrop-blur-sm`;
   };
 
   return (
-    <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50 p-4">
-      <div className="relative top-4 sm:top-20 mx-auto border w-full max-w-2xl shadow-lg rounded-md bg-white">
-        {/* Header */}
-        <div className="flex items-center justify-between p-4 sm:p-6 border-b border-gray-200">
-          <h3 className="text-lg sm:text-xl font-medium text-gray-900">
-            {task ? "Edit Task" : "Create New Task"}
-          </h3>
-          <button
-            onClick={onCancel}
-            className="text-gray-400 hover:text-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 rounded-md p-1"
-            aria-label="Close dialog"
-          >
-            <XMarkIcon className="h-6 w-6" />
-          </button>
-        </div>
-
-        {/* Form */}
-        <form
-          onSubmit={handleSubmit}
-          className="p-4 sm:p-6 space-y-4 sm:space-y-6"
-        >
-          {/* General Error */}
-          {errors.general && <ErrorMessage message={errors.general} />}
-
-          {/* Title */}
-          <div>
-            <label
-              htmlFor="title"
-              className="block text-sm font-medium text-gray-700 mb-1"
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-background/80 backdrop-blur-sm">
+      <motion.div
+        initial={{ opacity: 0, scale: 0.9 }}
+        animate={{ opacity: 1, scale: 1 }}
+        exit={{ opacity: 0, scale: 0.9 }}
+        className="w-full max-w-2xl"
+      >
+        <GlassCard className="w-full max-h-[90vh] overflow-y-auto" hoverEffect={false}>
+          {/* Header */}
+          <div className="flex items-center justify-between p-6 border-b border-white/10">
+            <h3 className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-white to-gray-400">
+              {task ? "Edit Task" : "Create New Task"}
+            </h3>
+            <button
+              onClick={onCancel}
+              className="text-gray-400 hover:text-white transition-colors focus:outline-none p-1"
+              aria-label="Close dialog"
             >
-              Title *
-            </label>
-            <input
-              type="text"
-              id="title"
-              name="title"
-              value={formData.title}
-              onChange={handleChange}
-              className={getInputClasses("title")}
-              placeholder="Enter task title"
-              aria-invalid={errors.title ? "true" : "false"}
-              aria-describedby={errors.title ? "title-error" : undefined}
-            />
-            {errors.title && (
-              <p id="title-error" className="mt-1 text-sm text-red-600">
-                {errors.title}
-              </p>
-            )}
+              <XMarkIcon className="h-6 w-6" />
+            </button>
           </div>
 
-          {/* Description */}
-          <div>
-            <label
-              htmlFor="description"
-              className="block text-sm font-medium text-gray-700 mb-1"
-            >
-              Description
-            </label>
-            <textarea
-              id="description"
-              name="description"
-              rows={4}
-              value={formData.description}
-              onChange={handleChange}
-              className={getInputClasses("description")}
-              placeholder="Enter task description"
-              aria-describedby={
-                errors.description ? "description-error" : undefined
-              }
-            />
-            {errors.description && (
-              <p id="description-error" className="mt-1 text-sm text-red-600">
-                {errors.description}
-              </p>
-            )}
-          </div>
+          {/* Form */}
+          <form onSubmit={handleSubmit} className="p-6 space-y-6">
+            {/* General Error */}
+            {errors.general && <ErrorMessage message={errors.general} />}
 
-          {/* Status and Priority Row */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {/* Title */}
             <div>
-              <label
-                htmlFor="status"
-                className="block text-sm font-medium text-gray-700 mb-1"
-              >
-                Status
-              </label>
-              <select
-                id="status"
-                name="status"
-                value={formData.status}
-                onChange={handleChange}
-                className={getInputClasses("status")}
-                aria-describedby={errors.status ? "status-error" : undefined}
-              >
-                <option value="todo">To Do</option>
-                <option value="in_progress">In Progress</option>
-                <option value="completed">Completed</option>
-              </select>
-              {errors.status && (
-                <p id="status-error" className="mt-1 text-sm text-red-600">
-                  {errors.status}
-                </p>
-              )}
-            </div>
-
-            <div>
-              <label
-                htmlFor="priority"
-                className="block text-sm font-medium text-gray-700 mb-1"
-              >
-                Priority
-              </label>
-              <select
-                id="priority"
-                name="priority"
-                value={formData.priority}
-                onChange={handleChange}
-                className={getInputClasses("priority")}
-                aria-describedby={
-                  errors.priority ? "priority-error" : undefined
-                }
-              >
-                <option value="low">Low</option>
-                <option value="medium">Medium</option>
-                <option value="high">High</option>
-              </select>
-              {errors.priority && (
-                <p id="priority-error" className="mt-1 text-sm text-red-600">
-                  {errors.priority}
-                </p>
-              )}
-            </div>
-          </div>
-
-          {/* Due Date and Assigned To Row */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <label
-                htmlFor="due_date"
-                className="block text-sm font-medium text-gray-700 mb-1"
-              >
-                Due Date
-              </label>
-              <input
-                type="date"
-                id="due_date"
-                name="due_date"
-                value={formData.due_date}
-                onChange={handleChange}
-                className={getInputClasses("due_date")}
-                aria-describedby={
-                  errors.due_date ? "due-date-error" : undefined
-                }
-              />
-              {errors.due_date && (
-                <p id="due-date-error" className="mt-1 text-sm text-red-600">
-                  {errors.due_date}
-                </p>
-              )}
-            </div>
-
-            <div>
-              <label
-                htmlFor="assigned_to"
-                className="block text-sm font-medium text-gray-700 mb-1"
-              >
-                Assigned To (User ID)
+              <label htmlFor="title" className="block text-sm font-medium text-gray-300 mb-1">
+                Title *
               </label>
               <input
                 type="text"
-                id="assigned_to"
-                name="assigned_to"
-                value={formData.assigned_to}
+                id="title"
+                name="title"
+                value={formData.title}
                 onChange={handleChange}
-                className={getInputClasses("assigned_to")}
-                placeholder="Enter user ID"
-                aria-describedby={
-                  errors.assigned_to ? "assigned-to-error" : undefined
-                }
+                className={getInputClasses("title")}
+                placeholder="Enter task title"
               />
-              {errors.assigned_to && (
-                <p id="assigned-to-error" className="mt-1 text-sm text-red-600">
-                  {errors.assigned_to}
-                </p>
-              )}
+              {errors.title && <p className="mt-1 text-sm text-red-400 ml-1">{errors.title}</p>}
             </div>
-          </div>
 
-          {/* Actions */}
-          <div className="flex flex-col sm:flex-row justify-end space-y-2 sm:space-y-0 sm:space-x-3 pt-4 border-t border-gray-200">
-            <button
-              type="button"
-              onClick={onCancel}
-              className="w-full sm:w-auto px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors"
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full sm:w-auto px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-            >
-              {loading ? (
-                <LoadingSpinner
-                  size="sm"
-                  color="white"
-                  text={task ? "Updating..." : "Creating..."}
+            {/* Description */}
+            <div>
+              <label htmlFor="description" className="block text-sm font-medium text-gray-300 mb-1">
+                Description
+              </label>
+              <textarea
+                id="description"
+                name="description"
+                rows={4}
+                value={formData.description}
+                onChange={handleChange}
+                className={getInputClasses("description")}
+                placeholder="Enter task description"
+              />
+              {errors.description && <p className="mt-1 text-sm text-red-400 ml-1">{errors.description}</p>}
+            </div>
+
+            {/* Status and Priority Row */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label htmlFor="status" className="block text-sm font-medium text-gray-300 mb-1">
+                  Status
+                </label>
+                <select
+                  id="status"
+                  name="status"
+                  value={formData.status}
+                  onChange={handleChange}
+                  className={getInputClasses("status")}
+                >
+                  <option value="todo">To Do</option>
+                  <option value="in_progress">In Progress</option>
+                  <option value="completed">Completed</option>
+                </select>
+                {errors.status && <p className="mt-1 text-sm text-red-400 ml-1">{errors.status}</p>}
+              </div>
+
+              <div>
+                <label htmlFor="priority" className="block text-sm font-medium text-gray-300 mb-1">
+                  Priority
+                </label>
+                <select
+                  id="priority"
+                  name="priority"
+                  value={formData.priority}
+                  onChange={handleChange}
+                  className={getInputClasses("priority")}
+                >
+                  <option value="low">Low</option>
+                  <option value="medium">Medium</option>
+                  <option value="high">High</option>
+                </select>
+                {errors.priority && <p className="mt-1 text-sm text-red-400 ml-1">{errors.priority}</p>}
+              </div>
+            </div>
+
+            {/* Due Date and Assigned To Row */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label htmlFor="due_date" className="block text-sm font-medium text-gray-300 mb-1">
+                  Due Date
+                </label>
+                <input
+                  type="date"
+                  id="due_date"
+                  name="due_date"
+                  value={formData.due_date}
+                  onChange={handleChange}
+                  className={getInputClasses("due_date")}
                 />
-              ) : task ? (
-                "Update Task"
-              ) : (
-                "Create Task"
-              )}
-            </button>
-          </div>
-        </form>
-      </div>
+                {errors.due_date && <p className="mt-1 text-sm text-red-400 ml-1">{errors.due_date}</p>}
+              </div>
+
+              <div>
+                <label htmlFor="assigned_to" className="block text-sm font-medium text-gray-300 mb-1">
+                  Assigned To (User ID)
+                </label>
+                <input
+                  type="text"
+                  id="assigned_to"
+                  name="assigned_to"
+                  value={formData.assigned_to}
+                  onChange={handleChange}
+                  className={getInputClasses("assigned_to")}
+                  placeholder="Enter user ID"
+                />
+                {errors.assigned_to && <p className="mt-1 text-sm text-red-400 ml-1">{errors.assigned_to}</p>}
+              </div>
+            </div>
+
+            {/* Actions */}
+            <div className="flex flex-col sm:flex-row justify-end space-y-3 sm:space-y-0 sm:space-x-3 pt-6 border-t border-white/10">
+              <AnimatedButton
+                type="button"
+                variant="ghost"
+                onClick={onCancel}
+              >
+                Cancel
+              </AnimatedButton>
+              <AnimatedButton
+                type="submit"
+                variant="primary"
+                isLoading={loading}
+              >
+                {task ? "Update Task" : "Create Task"}
+              </AnimatedButton>
+            </div>
+          </form>
+        </GlassCard>
+      </motion.div>
     </div>
   );
 };

@@ -5,6 +5,7 @@ import {
   ArrowPathIcon,
   InformationCircleIcon,
 } from "@heroicons/react/24/outline";
+import clsx from "clsx";
 
 interface NotificationItemProps {
   notification: Notification;
@@ -18,11 +19,11 @@ const NotificationItem: React.FC<NotificationItemProps> = ({
   const getIcon = (type: string) => {
     switch (type) {
       case "task_assigned":
-        return <UserPlusIcon className="h-5 w-5 text-blue-500" />;
+        return <UserPlusIcon className="h-5 w-5 text-blue-400" />;
       case "task_updated":
-        return <ArrowPathIcon className="h-5 w-5 text-green-500" />;
+        return <ArrowPathIcon className="h-5 w-5 text-green-400" />;
       default:
-        return <InformationCircleIcon className="h-5 w-5 text-gray-500" />;
+        return <InformationCircleIcon className="h-5 w-5 text-gray-400" />;
     }
   };
 
@@ -55,45 +56,36 @@ const NotificationItem: React.FC<NotificationItemProps> = ({
   return (
     <div
       onClick={handleClick}
-      className={`p-3 rounded-lg cursor-pointer transition-colors ${
+      className={clsx(
+        "p-4 cursor-pointer transition-colors border-l-2",
         notification.is_read
-          ? "bg-gray-50 hover:bg-gray-100"
-          : "bg-blue-50 hover:bg-blue-100 border-l-4 border-blue-500"
-      }`}
+          ? "bg-transparent border-transparent hover:bg-white/5 opacity-60 hover:opacity-100"
+          : "bg-primary/5 border-primary hover:bg-primary/10"
+      )}
     >
       <div className="flex items-start space-x-3">
         {/* Icon */}
-        <div className="flex-shrink-0 mt-0.5">{getIcon(notification.type)}</div>
+        <div className="flex-shrink-0 mt-0.5 opacity-80">{getIcon(notification.type)}</div>
 
         {/* Content */}
         <div className="flex-1 min-w-0">
           <p
-            className={`text-sm ${
-              notification.is_read
-                ? "text-gray-600"
-                : "text-gray-900 font-medium"
-            }`}
+            className={clsx(
+              "text-sm mb-1",
+              notification.is_read ? "text-gray-400" : "text-white font-medium"
+            )}
           >
             {notification.message}
           </p>
 
           {/* Metadata */}
-          <div className="mt-1 flex items-center space-x-2 text-xs text-gray-500">
+          <div className="flex items-center space-x-2 text-xs text-gray-500">
             <span>{formatDate(notification.created_at)}</span>
             {!notification.is_read && (
-              <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                New
-              </span>
+              <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
             )}
           </div>
         </div>
-
-        {/* Unread Indicator */}
-        {!notification.is_read && (
-          <div className="flex-shrink-0">
-            <div className="w-2 h-2 bg-blue-600 rounded-full"></div>
-          </div>
-        )}
       </div>
     </div>
   );

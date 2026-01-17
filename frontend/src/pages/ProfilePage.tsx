@@ -4,6 +4,7 @@ import ProfileView from "../components/profile/ProfileView";
 import ProfileEditForm from "../components/profile/ProfileEditForm";
 import AuthService from "../services/authService";
 import { getErrorMessage } from "../utils/errorHandler";
+import LoadingSpinner from "../components/common/LoadingSpinner";
 
 const ProfilePage: React.FC = () => {
   const { user, login } = useAuth();
@@ -13,12 +14,8 @@ const ProfilePage: React.FC = () => {
 
   if (!user) {
     return (
-      <div className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
-        <div className="px-4 py-6 sm:px-0">
-          <div className="text-center">
-            <p className="text-gray-500">Loading user profile...</p>
-          </div>
-        </div>
+      <div className="flex justify-center items-center py-20">
+        <LoadingSpinner text="Loading profile..." />
       </div>
     );
   }
@@ -57,20 +54,18 @@ const ProfilePage: React.FC = () => {
   };
 
   return (
-    <div className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
-      <div className="px-4 py-6 sm:px-0">
-        {isEditing ? (
-          <ProfileEditForm
-            user={user}
-            onSubmit={handleProfileUpdate}
-            onCancel={handleCancel}
-            isLoading={isLoading}
-            error={error}
-          />
-        ) : (
-          <ProfileView user={user} onEdit={handleEdit} />
-        )}
-      </div>
+    <div className="py-6">
+      {isEditing ? (
+        <ProfileEditForm
+          user={user}
+          onSubmit={handleProfileUpdate}
+          onCancel={handleCancel}
+          isLoading={isLoading}
+          error={error}
+        />
+      ) : (
+        <ProfileView user={user} onEdit={handleEdit} />
+      )}
     </div>
   );
 };

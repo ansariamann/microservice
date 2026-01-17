@@ -1,5 +1,8 @@
 import React from "react";
 import { User } from "../../types/auth";
+import GlassCard from "../common/GlassCard";
+import AnimatedButton from "../common/AnimatedButton";
+import { UserCircleIcon, EnvelopeIcon, CalendarIcon, ClockIcon } from "@heroicons/react/24/outline";
 
 interface ProfileViewProps {
   user: User;
@@ -8,79 +11,81 @@ interface ProfileViewProps {
 
 const ProfileView: React.FC<ProfileViewProps> = ({ user, onEdit }) => {
   return (
-    <div className="bg-white shadow rounded-lg">
-      <div className="px-4 py-5 sm:p-6">
-        <div className="flex items-center justify-between mb-6">
-          <h1 className="text-2xl font-bold text-gray-900">User Profile</h1>
-          <button
-            onClick={onEdit}
-            className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md text-sm font-medium"
-          >
-            Edit Profile
-          </button>
+    <GlassCard className="max-w-4xl mx-auto p-8 relative overflow-hidden" hoverEffect={false}>
+      {/* Decorative Background */}
+      <div className="absolute top-0 right-0 w-64 h-64 bg-primary/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2 pointer-events-none" />
+      <div className="absolute bottom-0 left-0 w-64 h-64 bg-secondary/10 rounded-full blur-3xl translate-y-1/2 -translate-x-1/2 pointer-events-none" />
+
+      <div className="relative z-10 flex flex-col md:flex-row items-start md:items-center justify-between mb-8 gap-4">
+        <div className="flex items-center space-x-4">
+          <div className="w-20 h-20 rounded-2xl bg-gradient-to-tr from-primary to-secondary flex items-center justify-center text-3xl font-bold text-white shadow-lg">
+            {user.name.charAt(0)}
+          </div>
+          <div>
+            <h1 className="text-3xl font-bold text-white mb-1">{user.name}</h1>
+            <p className="text-gray-400 flex items-center">
+              <span className="w-2 h-2 rounded-full bg-green-500 mr-2 animate-pulse" />
+              Active Member
+            </p>
+          </div>
+        </div>
+        <AnimatedButton onClick={onEdit} variant="primary">
+          Edit Profile
+        </AnimatedButton>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 relative z-10">
+        <div className="p-4 rounded-xl bg-white/5 border border-white/10 hover:border-primary/50 transition-colors duration-300">
+          <div className="flex items-center text-gray-400 mb-2">
+            <UserCircleIcon className="w-5 h-5 mr-2" />
+            <span className="text-sm font-medium">Full Name</span>
+          </div>
+          <p className="text-lg text-white font-medium pl-7">{user.name}</p>
         </div>
 
-        <div className="space-y-6">
-          <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
-            <div>
-              <label className="block text-sm font-medium text-gray-700">
-                Full Name
-              </label>
-              <div className="mt-1 text-sm text-gray-900 bg-gray-50 px-3 py-2 rounded-md">
-                {user.name}
-              </div>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700">
-                Email Address
-              </label>
-              <div className="mt-1 text-sm text-gray-900 bg-gray-50 px-3 py-2 rounded-md">
-                {user.email}
-              </div>
-            </div>
+        <div className="p-4 rounded-xl bg-white/5 border border-white/10 hover:border-primary/50 transition-colors duration-300">
+          <div className="flex items-center text-gray-400 mb-2">
+            <EnvelopeIcon className="w-5 h-5 mr-2" />
+            <span className="text-sm font-medium">Email Address</span>
           </div>
+          <p className="text-lg text-white font-medium pl-7">{user.email}</p>
+        </div>
 
-          <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
-            <div>
-              <label className="block text-sm font-medium text-gray-700">
-                Member Since
-              </label>
-              <div className="mt-1 text-sm text-gray-900 bg-gray-50 px-3 py-2 rounded-md">
-                {new Date(user.created_at).toLocaleDateString("en-US", {
-                  year: "numeric",
-                  month: "long",
-                  day: "numeric",
-                })}
-              </div>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700">
-                Last Updated
-              </label>
-              <div className="mt-1 text-sm text-gray-900 bg-gray-50 px-3 py-2 rounded-md">
-                {new Date(user.updated_at).toLocaleDateString("en-US", {
-                  year: "numeric",
-                  month: "long",
-                  day: "numeric",
-                })}
-              </div>
-            </div>
+        <div className="p-4 rounded-xl bg-white/5 border border-white/10 hover:border-primary/50 transition-colors duration-300">
+          <div className="flex items-center text-gray-400 mb-2">
+            <CalendarIcon className="w-5 h-5 mr-2" />
+            <span className="text-sm font-medium">Member Since</span>
           </div>
+          <p className="text-lg text-white font-medium pl-7">
+            {new Date(user.created_at).toLocaleDateString("en-US", {
+              year: "numeric",
+              month: "long",
+              day: "numeric",
+            })}
+          </p>
+        </div>
 
-          <div className="border-t border-gray-200 pt-6">
-            <div className="text-sm text-gray-500">
-              <p>
-                Your profile information is used to personalize your experience
-                and help other team members identify you when working on shared
-                tasks.
-              </p>
-            </div>
+        <div className="p-4 rounded-xl bg-white/5 border border-white/10 hover:border-primary/50 transition-colors duration-300">
+          <div className="flex items-center text-gray-400 mb-2">
+            <ClockIcon className="w-5 h-5 mr-2" />
+            <span className="text-sm font-medium">Last Updated</span>
           </div>
+          <p className="text-lg text-white font-medium pl-7">
+            {new Date(user.updated_at).toLocaleDateString("en-US", {
+              year: "numeric",
+              month: "long",
+              day: "numeric",
+            })}
+          </p>
         </div>
       </div>
-    </div>
+
+      <div className="mt-8 pt-6 border-t border-white/10 text-center md:text-left">
+        <p className="text-sm text-gray-500">
+          Your profile information is visible to other team members and is used for task assignments.
+        </p>
+      </div>
+    </GlassCard>
   );
 };
 

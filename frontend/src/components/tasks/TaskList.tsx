@@ -6,7 +6,10 @@ import TaskItem from "./TaskItem";
 import TaskForm from "./TaskForm";
 import ErrorMessage from "../common/ErrorMessage";
 import LoadingSpinner from "../common/LoadingSpinner";
-import { PlusIcon, FunnelIcon } from "@heroicons/react/24/outline";
+import AnimatedButton from "../common/AnimatedButton";
+import GlassCard from "../common/GlassCard";
+import { PlusIcon, FunnelIcon, AdjustmentsHorizontalIcon } from "@heroicons/react/24/outline";
+import { motion, AnimatePresence } from "framer-motion";
 
 interface TaskListProps {
   userId?: string;
@@ -16,9 +19,7 @@ const TaskList: React.FC<TaskListProps> = ({ userId }) => {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [filteredTasks, setFilteredTasks] = useState<Task[]>([]);
   const [statusFilter, setStatusFilter] = useState<TaskStatus | "all">("all");
-  const [sortBy, setSortBy] = useState<"created_at" | "due_date" | "priority">(
-    "created_at"
-  );
+  const [sortBy, setSortBy] = useState<"created_at" | "due_date" | "priority">("created_at");
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
@@ -40,19 +41,16 @@ const TaskList: React.FC<TaskListProps> = ({ userId }) => {
   useEffect(() => {
     let filtered = [...tasks];
 
-    // Apply status filter
     if (statusFilter !== "all") {
       filtered = filtered.filter((task) => task.status === statusFilter);
     }
 
-    // Apply user filter if specified
     if (userId) {
       filtered = filtered.filter(
         (task) => task.created_by === userId || task.assigned_to === userId
       );
     }
 
-    // Apply sorting
     filtered.sort((a, b) => {
       let aValue: any = a[sortBy];
       let bValue: any = b[sortBy];
@@ -96,197 +94,143 @@ const TaskList: React.FC<TaskListProps> = ({ userId }) => {
     );
   }
 
+  const FilterControls = () => (
+    <div className="flex flex-wrap gap-4 items-center">
+      <div className="flex items-center space-x-2">
+        <label htmlFor="status-filter" className="text-sm font-medium text-gray-400">Status:</label>
+        <select
+          id="status-filter"
+          value={statusFilter}
+          onChange={(e) => setStatusFilter(e.target.value as TaskStatus | "all")}
+          className="bg-surface/50 border border-white/10 rounded-lg text-sm text-gray-200 focus:ring-primary focus:border-primary px-3 py-1.5"
+        >
+          <option value="all">All</option>
+          <option value="todo">To Do</option>
+          <option value="in_progress">In Progress</option>
+          <option value="completed">Completed</option>
+        </select>
+      </div>
+
+      <div className="flex items-center space-x-2">
+        <label htmlFor="sort-by" className="text-sm font-medium text-gray-400">Sort:</label>
+        <select
+          id="sort-by"
+          value={sortBy}
+          onChange={(e) => setSortBy(e.target.value as "created_at" | "due_date" | "priority")}
+          className="bg-surface/50 border border-white/10 rounded-lg text-sm text-gray-200 focus:ring-primary focus:border-primary px-3 py-1.5"
+        >
+          <option value="created_at">Created</option>
+          <option value="due_date">Due Date</option>
+          <option value="priority">Priority</option>
+        </select>
+      </div>
+
+      <div className="flex items-center space-x-2">
+        <select
+          id="sort-order"
+          value={sortOrder}
+          onChange={(e) => setSortOrder(e.target.value as "asc" | "desc")}
+          className="bg-surface/50 border border-white/10 rounded-lg text-sm text-gray-200 focus:ring-primary focus:border-primary px-3 py-1.5"
+        >
+          <option value="desc">Newest</option>
+          <option value="asc">Oldest</option>
+        </select>
+      </div>
+    </div>
+  );
+
   return (
-    <div className="space-y-4 sm:space-y-6">
-      {/* Error Message */}
-      {error && (
-        <ErrorMessage
-          message={error}
-          onDismiss={() => window.location.reload()}
-        />
-      )}
+    <div className="space-y-6">
+      {error && <ErrorMessage message={error} onDismiss={() => window.location.reload()} />}
 
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
-        <h2 className="text-xl sm:text-2xl font-bold text-gray-900">Tasks</h2>
-        <div className="flex flex-col sm:flex-row gap-2">
-          <button
+        <h2 className="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-white to-gray-400">
+          Tasks
+        </h2>
+        <div className="flex gap-3">
+          <AnimatedButton
             onClick={() => setShowFilters(!showFilters)}
-            className="sm:hidden inline-flex items-center justify-center px-3 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+            variant="outline"
+            className="sm:hidden"
           >
-            <FunnelIcon className="h-4 w-4 mr-2" />
+            <FunnelIcon className="h-5 w-5 mr-2" />
             Filters
-          </button>
-          <button
-            onClick={() => setShowCreateForm(true)}
-            className="inline-flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors"
-          >
-            <PlusIcon className="h-4 w-4 mr-2" />
-            <span className="hidden sm:inline">New Task</span>
-            <span className="sm:hidden">New</span>
-          </button>
+          </AnimatedButton>
+          <AnimatedButton onClick={() => setShowCreateForm(true)}>
+            <PlusIcon className="h-5 w-5 mr-2" />
+            New Task
+          </AnimatedButton>
         </div>
       </div>
 
-      {/* Filters and Sorting - Desktop */}
-      <div className="hidden sm:flex flex-wrap gap-4 items-center bg-gray-50 p-4 rounded-lg">
-        <div className="flex items-center space-x-2">
-          <label
-            htmlFor="status-filter"
-            className="text-sm font-medium text-gray-700 whitespace-nowrap"
-          >
-            Status:
-          </label>
-          <select
-            id="status-filter"
-            value={statusFilter}
-            onChange={(e) =>
-              setStatusFilter(e.target.value as TaskStatus | "all")
-            }
-            className="border-gray-300 rounded-md text-sm focus:ring-blue-500 focus:border-blue-500 min-w-0"
-          >
-            <option value="all">All</option>
-            <option value="todo">To Do</option>
-            <option value="in_progress">In Progress</option>
-            <option value="completed">Completed</option>
-          </select>
+      {/* Desktop Filters */}
+      <GlassCard className="hidden sm:block p-4" hoverEffect={false}>
+        <div className="flex items-center gap-2 mb-2 text-primary font-medium">
+          <AdjustmentsHorizontalIcon className="w-5 h-5" />
+          <span>Filter & Sort</span>
         </div>
+        <FilterControls />
+      </GlassCard>
 
-        <div className="flex items-center space-x-2">
-          <label
-            htmlFor="sort-by"
-            className="text-sm font-medium text-gray-700 whitespace-nowrap"
+      {/* Mobile Filters */}
+      <AnimatePresence>
+        {showFilters && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: "auto", opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            className="sm:hidden"
           >
-            Sort by:
-          </label>
-          <select
-            id="sort-by"
-            value={sortBy}
-            onChange={(e) =>
-              setSortBy(
-                e.target.value as "created_at" | "due_date" | "priority"
-              )
-            }
-            className="border-gray-300 rounded-md text-sm focus:ring-blue-500 focus:border-blue-500 min-w-0"
-          >
-            <option value="created_at">Created Date</option>
-            <option value="due_date">Due Date</option>
-            <option value="priority">Priority</option>
-          </select>
-        </div>
-
-        <div className="flex items-center space-x-2">
-          <label
-            htmlFor="sort-order"
-            className="text-sm font-medium text-gray-700 whitespace-nowrap"
-          >
-            Order:
-          </label>
-          <select
-            id="sort-order"
-            value={sortOrder}
-            onChange={(e) => setSortOrder(e.target.value as "asc" | "desc")}
-            className="border-gray-300 rounded-md text-sm focus:ring-blue-500 focus:border-blue-500 min-w-0"
-          >
-            <option value="desc">Newest First</option>
-            <option value="asc">Oldest First</option>
-          </select>
-        </div>
-      </div>
-
-      {/* Filters and Sorting - Mobile */}
-      {showFilters && (
-        <div className="sm:hidden bg-gray-50 p-4 rounded-lg space-y-4">
-          <div>
-            <label
-              htmlFor="mobile-status-filter"
-              className="block text-sm font-medium text-gray-700 mb-2"
-            >
-              Status
-            </label>
-            <select
-              id="mobile-status-filter"
-              value={statusFilter}
-              onChange={(e) =>
-                setStatusFilter(e.target.value as TaskStatus | "all")
-              }
-              className="w-full border-gray-300 rounded-md text-sm focus:ring-blue-500 focus:border-blue-500"
-            >
-              <option value="all">All</option>
-              <option value="todo">To Do</option>
-              <option value="in_progress">In Progress</option>
-              <option value="completed">Completed</option>
-            </select>
-          </div>
-
-          <div>
-            <label
-              htmlFor="mobile-sort-by"
-              className="block text-sm font-medium text-gray-700 mb-2"
-            >
-              Sort by
-            </label>
-            <select
-              id="mobile-sort-by"
-              value={sortBy}
-              onChange={(e) =>
-                setSortBy(
-                  e.target.value as "created_at" | "due_date" | "priority"
-                )
-              }
-              className="w-full border-gray-300 rounded-md text-sm focus:ring-blue-500 focus:border-blue-500"
-            >
-              <option value="created_at">Created Date</option>
-              <option value="due_date">Due Date</option>
-              <option value="priority">Priority</option>
-            </select>
-          </div>
-
-          <div>
-            <label
-              htmlFor="mobile-sort-order"
-              className="block text-sm font-medium text-gray-700 mb-2"
-            >
-              Order
-            </label>
-            <select
-              id="mobile-sort-order"
-              value={sortOrder}
-              onChange={(e) => setSortOrder(e.target.value as "asc" | "desc")}
-              className="w-full border-gray-300 rounded-md text-sm focus:ring-blue-500 focus:border-blue-500"
-            >
-              <option value="desc">Newest First</option>
-              <option value="asc">Oldest First</option>
-            </select>
-          </div>
-        </div>
-      )}
+            <GlassCard className="p-4 space-y-4">
+              <FilterControls />
+            </GlassCard>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Task List */}
-      <div className="space-y-4">
-        {filteredTasks.length === 0 ? (
-          <div className="text-center py-12">
-            <p className="text-gray-500 text-lg">No tasks found</p>
-            <p className="text-gray-400 text-sm mt-2">
-              {statusFilter !== "all"
-                ? "Try changing the filter"
-                : "Create your first task to get started"}
-            </p>
-          </div>
-        ) : (
-          filteredTasks.map((task) => (
-            <TaskItem
-              key={task.id}
-              task={task}
-              onEdit={setEditingTask}
-              onDelete={handleTaskDeleted}
-              onUpdate={handleTaskUpdated}
-            />
-          ))
-        )}
-      </div>
+      <motion.div
+        layout
+        className="space-y-4"
+      >
+        <AnimatePresence mode="popLayout">
+          {filteredTasks.length === 0 ? (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              className="text-center py-20"
+            >
+              <GlassCard className="inline-block p-8" hoverEffect={false}>
+                <p className="text-gray-400 text-lg">No tasks found</p>
+                <p className="text-gray-500 text-sm mt-2">
+                  {statusFilter !== "all" ? "Try changing the filter" : "Create your first task to get started"}
+                </p>
+              </GlassCard>
+            </motion.div>
+          ) : (
+            filteredTasks.map((task) => (
+              <motion.div
+                key={task.id}
+                layout
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.95 }}
+                transition={{ duration: 0.2 }}
+              >
+                <TaskItem
+                  task={task}
+                  onEdit={setEditingTask}
+                  onDelete={handleTaskDeleted}
+                  onUpdate={handleTaskUpdated}
+                />
+              </motion.div>
+            ))
+          )}
+        </AnimatePresence>
+      </motion.div>
 
-      {/* Create Task Modal */}
+      {/* Create Task Modal - Needs own glass implementation or wrapper */}
       {showCreateForm && (
         <TaskForm
           onSubmit={handleTaskCreated}

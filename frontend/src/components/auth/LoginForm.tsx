@@ -5,7 +5,9 @@ import * as yup from "yup";
 import { Link } from "react-router-dom";
 import { UserLogin } from "../../types/auth";
 import ErrorMessage from "../common/ErrorMessage";
-import LoadingSpinner from "../common/LoadingSpinner";
+import GlassCard from "../common/GlassCard";
+import AnimatedButton from "../common/AnimatedButton";
+import { motion } from "framer-motion";
 
 const schema = yup.object({
   email: yup
@@ -41,40 +43,36 @@ const LoginForm: React.FC<LoginFormProps> = ({
 
   const getInputClasses = (fieldName: keyof UserLogin) => {
     const hasError = errors[fieldName];
-    return `mt-1 appearance-none relative block w-full px-3 py-2 border placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:z-10 sm:text-sm transition-colors ${
-      hasError
-        ? "border-red-300 focus:ring-red-500 focus:border-red-500"
-        : "border-gray-300 focus:ring-blue-500 focus:border-blue-500"
-    }`;
+    return `mt-1 block w-full px-4 py-3 bg-surface/50 border ${hasError ? "border-red-500/50 focus:ring-red-500" : "border-white/10 focus:ring-primary"
+      } rounded-xl text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:border-transparent transition-all duration-300 backdrop-blur-sm`;
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-md w-full space-y-8">
-        <div>
-          <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
-            Sign in to your account
-          </h2>
-          <p className="mt-2 text-center text-sm text-gray-600">
-            Or{" "}
-            <Link
-              to="/register"
-              className="font-medium text-blue-600 hover:text-blue-500"
-            >
-              create a new account
-            </Link>
+    <div className="min-h-screen flex items-center justify-center bg-background px-4 sm:px-6 lg:px-8 relative overflow-hidden">
+      {/* Background Blobs */}
+      <div className="absolute top-[-20%] left-[-20%] w-[50%] h-[50%] bg-primary/20 rounded-full blur-[100px] animate-pulse-slow" />
+      <div className="absolute bottom-[-20%] right-[-20%] w-[50%] h-[50%] bg-secondary/20 rounded-full blur-[100px] animate-pulse-slow delay-1000" />
+
+      <GlassCard className="w-full max-w-md p-8 relative z-10" hoverEffect={false}>
+        <div className="text-center mb-8">
+          <motion.h2
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-primary to-secondary"
+          >
+            Welcome Back
+          </motion.h2>
+          <p className="mt-2 text-sm text-gray-400">
+            Sign in to manage your tasks effectively
           </p>
         </div>
 
-        <form className="mt-8 space-y-6" onSubmit={handleSubmit(onSubmit)}>
+        <form className="space-y-6" onSubmit={handleSubmit(onSubmit)}>
           {error && <ErrorMessage message={error} className="mb-4" />}
 
           <div className="space-y-4">
             <div>
-              <label
-                htmlFor="email"
-                className="block text-sm font-medium text-gray-700"
-              >
+              <label htmlFor="email" className="block text-sm font-medium text-gray-300 ml-1">
                 Email Address
               </label>
               <input
@@ -83,22 +81,17 @@ const LoginForm: React.FC<LoginFormProps> = ({
                 type="email"
                 autoComplete="email"
                 className={getInputClasses("email")}
-                placeholder="Enter your email address"
-                aria-invalid={errors.email ? "true" : "false"}
-                aria-describedby={errors.email ? "email-error" : undefined}
+                placeholder="Enter your email"
               />
               {errors.email && (
-                <p id="email-error" className="mt-1 text-sm text-red-600">
+                <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="mt-1 text-sm text-red-400 ml-1">
                   {errors.email.message}
-                </p>
+                </motion.p>
               )}
             </div>
 
             <div>
-              <label
-                htmlFor="password"
-                className="block text-sm font-medium text-gray-700"
-              >
+              <label htmlFor="password" className="block text-sm font-medium text-gray-300 ml-1">
                 Password
               </label>
               <div className="relative">
@@ -109,44 +102,47 @@ const LoginForm: React.FC<LoginFormProps> = ({
                   autoComplete="current-password"
                   className={getInputClasses("password")}
                   placeholder="Enter your password"
-                  aria-invalid={errors.password ? "true" : "false"}
-                  aria-describedby={
-                    errors.password ? "password-error" : undefined
-                  }
                 />
                 <button
                   type="button"
-                  className="absolute inset-y-0 right-0 pr-3 flex items-center"
+                  className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-white transition-colors"
                   onClick={() => setShowPassword(!showPassword)}
                 >
-                  <span className="text-sm text-gray-500">
+                  <span className="text-xs uppercase font-medium tracking-wider">
                     {showPassword ? "Hide" : "Show"}
                   </span>
                 </button>
               </div>
               {errors.password && (
-                <p id="password-error" className="mt-1 text-sm text-red-600">
+                <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="mt-1 text-sm text-red-400 ml-1">
                   {errors.password.message}
-                </p>
+                </motion.p>
               )}
             </div>
           </div>
 
-          <div>
-            <button
+          <div className="pt-2">
+            <AnimatedButton
               type="submit"
-              disabled={isLoading || isSubmitting}
-              className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              variant="primary"
+              size="lg"
+              className="w-full"
+              isLoading={isLoading || isSubmitting}
             >
-              {isLoading || isSubmitting ? (
-                <LoadingSpinner size="sm" color="white" text="Signing In..." />
-              ) : (
-                "Sign In"
-              )}
-            </button>
+              Sign In
+            </AnimatedButton>
+          </div>
+
+          <div className="text-center mt-4">
+            <p className="text-sm text-gray-400">
+              Don't have an account?{" "}
+              <Link to="/register" className="font-medium text-primary hover:text-accent transition-colors">
+                Sign up now
+              </Link>
+            </p>
           </div>
         </form>
-      </div>
+      </GlassCard>
     </div>
   );
 };

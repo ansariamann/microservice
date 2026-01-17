@@ -5,7 +5,9 @@ import * as yup from "yup";
 import { Link, useNavigate } from "react-router-dom";
 import { UserRegistration } from "../../types/auth";
 import ErrorMessage from "../common/ErrorMessage";
-import LoadingSpinner from "../common/LoadingSpinner";
+import GlassCard from "../common/GlassCard";
+import AnimatedButton from "../common/AnimatedButton";
+import { motion } from "framer-motion";
 
 const schema = yup.object({
   name: yup
@@ -48,7 +50,6 @@ const RegisterForm: React.FC<RegisterFormProps> = ({
   isLoading,
   error,
 }) => {
-  const navigate = useNavigate();
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const {
@@ -61,8 +62,6 @@ const RegisterForm: React.FC<RegisterFormProps> = ({
     mode: "onChange",
   });
 
-  const password = watch("password");
-
   const handleFormSubmit = async (data: FormData) => {
     const { confirmPassword, ...registrationData } = data;
     await onSubmit(registrationData);
@@ -70,190 +69,120 @@ const RegisterForm: React.FC<RegisterFormProps> = ({
 
   const getInputClasses = (fieldName: keyof FormData) => {
     const hasError = errors[fieldName];
-    return `mt-1 appearance-none relative block w-full px-3 py-2 border placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:z-10 sm:text-sm transition-colors ${
-      hasError
-        ? "border-red-300 focus:ring-red-500 focus:border-red-500"
-        : "border-gray-300 focus:ring-blue-500 focus:border-blue-500"
-    }`;
+    return `mt-1 block w-full px-4 py-3 bg-surface/50 border ${hasError ? "border-red-500/50 focus:ring-red-500" : "border-white/10 focus:ring-primary"
+      } rounded-xl text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:border-transparent transition-all duration-300 backdrop-blur-sm`;
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-md w-full space-y-8">
-        <div>
-          <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
-            Create your account
-          </h2>
-          <p className="mt-2 text-center text-sm text-gray-600">
-            Or{" "}
-            <Link
-              to="/login"
-              className="font-medium text-blue-600 hover:text-blue-500"
-            >
-              sign in to your existing account
-            </Link>
+    <div className="min-h-screen flex items-center justify-center bg-background px-4 sm:px-6 lg:px-8 relative overflow-hidden">
+      {/* Background Blobs */}
+      <div className="absolute top-[10%] right-[10%] w-[40%] h-[40%] bg-accent/20 rounded-full blur-[100px] animate-pulse-slow" />
+      <div className="absolute bottom-[10%] left-[10%] w-[40%] h-[40%] bg-primary/20 rounded-full blur-[100px] animate-pulse-slow delay-1000" />
+
+      <GlassCard className="w-full max-w-md p-8 relative z-10" hoverEffect={false}>
+        <div className="text-center mb-8">
+          <motion.h2
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-secondary to-accent"
+          >
+            Create Account
+          </motion.h2>
+          <p className="mt-2 text-sm text-gray-400">
+            Join us and start organizing your life
           </p>
         </div>
 
-        <form
-          className="mt-8 space-y-6"
-          onSubmit={handleSubmit(handleFormSubmit)}
-        >
+        <form className="space-y-5" onSubmit={handleSubmit(handleFormSubmit)}>
           {error && <ErrorMessage message={error} className="mb-4" />}
 
-          <div className="space-y-4">
-            <div>
-              <label
-                htmlFor="name"
-                className="block text-sm font-medium text-gray-700"
-              >
-                Full Name
-              </label>
-              <input
-                {...register("name")}
-                id="name"
-                type="text"
-                className={getInputClasses("name")}
-                placeholder="Enter your full name"
-                aria-invalid={errors.name ? "true" : "false"}
-                aria-describedby={errors.name ? "name-error" : undefined}
-              />
-              {errors.name && (
-                <p id="name-error" className="mt-1 text-sm text-red-600">
-                  {errors.name.message}
-                </p>
-              )}
-            </div>
-
-            <div>
-              <label
-                htmlFor="email"
-                className="block text-sm font-medium text-gray-700"
-              >
-                Email Address
-              </label>
-              <input
-                {...register("email")}
-                id="email"
-                type="email"
-                autoComplete="email"
-                className={getInputClasses("email")}
-                placeholder="Enter your email address"
-                aria-invalid={errors.email ? "true" : "false"}
-                aria-describedby={errors.email ? "email-error" : undefined}
-              />
-              {errors.email && (
-                <p id="email-error" className="mt-1 text-sm text-red-600">
-                  {errors.email.message}
-                </p>
-              )}
-            </div>
-
-            <div>
-              <label
-                htmlFor="password"
-                className="block text-sm font-medium text-gray-700"
-              >
-                Password
-              </label>
-              <div className="relative">
-                <input
-                  {...register("password")}
-                  id="password"
-                  type={showPassword ? "text" : "password"}
-                  autoComplete="new-password"
-                  className={getInputClasses("password")}
-                  placeholder="Enter your password"
-                  aria-invalid={errors.password ? "true" : "false"}
-                  aria-describedby={
-                    errors.password ? "password-error" : "password-help"
-                  }
-                />
-                <button
-                  type="button"
-                  className="absolute inset-y-0 right-0 pr-3 flex items-center"
-                  onClick={() => setShowPassword(!showPassword)}
-                >
-                  <span className="text-sm text-gray-500">
-                    {showPassword ? "Hide" : "Show"}
-                  </span>
-                </button>
-              </div>
-              {errors.password && (
-                <p id="password-error" className="mt-1 text-sm text-red-600">
-                  {errors.password.message}
-                </p>
-              )}
-              {!errors.password && (
-                <p id="password-help" className="mt-1 text-xs text-gray-500">
-                  Must contain at least 6 characters with uppercase, lowercase,
-                  and number
-                </p>
-              )}
-            </div>
-
-            <div>
-              <label
-                htmlFor="confirmPassword"
-                className="block text-sm font-medium text-gray-700"
-              >
-                Confirm Password
-              </label>
-              <div className="relative">
-                <input
-                  {...register("confirmPassword")}
-                  id="confirmPassword"
-                  type={showConfirmPassword ? "text" : "password"}
-                  autoComplete="new-password"
-                  className={getInputClasses("confirmPassword")}
-                  placeholder="Confirm your password"
-                  aria-invalid={errors.confirmPassword ? "true" : "false"}
-                  aria-describedby={
-                    errors.confirmPassword
-                      ? "confirm-password-error"
-                      : undefined
-                  }
-                />
-                <button
-                  type="button"
-                  className="absolute inset-y-0 right-0 pr-3 flex items-center"
-                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                >
-                  <span className="text-sm text-gray-500">
-                    {showConfirmPassword ? "Hide" : "Show"}
-                  </span>
-                </button>
-              </div>
-              {errors.confirmPassword && (
-                <p
-                  id="confirm-password-error"
-                  className="mt-1 text-sm text-red-600"
-                >
-                  {errors.confirmPassword.message}
-                </p>
-              )}
-            </div>
+          <div>
+            <label htmlFor="name" className="block text-sm font-medium text-gray-300 ml-1">Full Name</label>
+            <input
+              {...register("name")}
+              id="name"
+              className={getInputClasses("name")}
+              placeholder="John Doe"
+            />
+            {errors.name && <p className="mt-1 text-sm text-red-400 ml-1">{errors.name.message}</p>}
           </div>
 
           <div>
-            <button
+            <label htmlFor="email" className="block text-sm font-medium text-gray-300 ml-1">Email Address</label>
+            <input
+              {...register("email")}
+              id="email"
+              type="email"
+              className={getInputClasses("email")}
+              placeholder="john@example.com"
+            />
+            {errors.email && <p className="mt-1 text-sm text-red-400 ml-1">{errors.email.message}</p>}
+          </div>
+
+          <div>
+            <label htmlFor="password" className="block text-sm font-medium text-gray-300 ml-1">Password</label>
+            <div className="relative">
+              <input
+                {...register("password")}
+                id="password"
+                type={showPassword ? "text" : "password"}
+                className={getInputClasses("password")}
+                placeholder="••••••••"
+              />
+              <button
+                type="button"
+                className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-white"
+                onClick={() => setShowPassword(!showPassword)}
+              >
+                <span className="text-xs uppercase">{showPassword ? "Hide" : "Show"}</span>
+              </button>
+            </div>
+            {errors.password && <p className="mt-1 text-sm text-red-400 ml-1">{errors.password.message}</p>}
+          </div>
+
+          <div>
+            <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-300 ml-1">Confirm Password</label>
+            <div className="relative">
+              <input
+                {...register("confirmPassword")}
+                id="confirmPassword"
+                type={showConfirmPassword ? "text" : "password"}
+                className={getInputClasses("confirmPassword")}
+                placeholder="••••••••"
+              />
+              <button
+                type="button"
+                className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-white"
+                onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+              >
+                <span className="text-xs uppercase">{showConfirmPassword ? "Hide" : "Show"}</span>
+              </button>
+            </div>
+            {errors.confirmPassword && <p className="mt-1 text-sm text-red-400 ml-1">{errors.confirmPassword.message}</p>}
+          </div>
+
+          <div className="pt-4">
+            <AnimatedButton
               type="submit"
-              disabled={isLoading || isSubmitting}
-              className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              variant="secondary"
+              size="lg"
+              className="w-full"
+              isLoading={isLoading || isSubmitting}
             >
-              {isLoading || isSubmitting ? (
-                <LoadingSpinner
-                  size="sm"
-                  color="white"
-                  text="Creating Account..."
-                />
-              ) : (
-                "Create Account"
-              )}
-            </button>
+              Sign Up
+            </AnimatedButton>
+          </div>
+
+          <div className="text-center mt-4">
+            <p className="text-sm text-gray-400">
+              Already have an account?{" "}
+              <Link to="/login" className="font-medium text-secondary hover:text-pink-400 transition-colors">
+                Sign in
+              </Link>
+            </p>
           </div>
         </form>
-      </div>
+      </GlassCard>
     </div>
   );
 };

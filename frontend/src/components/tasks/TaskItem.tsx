@@ -3,6 +3,7 @@ import { Task, TaskStatus } from "../../types/task";
 import { taskService } from "../../services/taskService";
 import { useAsync } from "../../hooks/useAsync";
 import DeleteConfirmationDialog from "./DeleteConfirmationDialog";
+import GlassCard from "../common/GlassCard";
 import {
   PencilIcon,
   TrashIcon,
@@ -10,6 +11,7 @@ import {
   UserIcon,
   ClockIcon,
 } from "@heroicons/react/24/outline";
+import clsx from "clsx";
 
 interface TaskItemProps {
   task: Task;
@@ -50,26 +52,26 @@ const TaskItem: React.FC<TaskItemProps> = ({
   const getStatusColor = (status: TaskStatus) => {
     switch (status) {
       case "todo":
-        return "bg-gray-100 text-gray-800";
+        return "bg-gray-500/20 text-gray-300 border-gray-500/30";
       case "in_progress":
-        return "bg-blue-100 text-blue-800";
+        return "bg-blue-500/20 text-blue-300 border-blue-500/30 animate-pulse-slow";
       case "completed":
-        return "bg-green-100 text-green-800";
+        return "bg-green-500/20 text-green-300 border-green-500/30";
       default:
-        return "bg-gray-100 text-gray-800";
+        return "bg-gray-500/20 text-gray-300";
     }
   };
 
   const getPriorityColor = (priority: string) => {
     switch (priority) {
       case "high":
-        return "text-red-600";
+        return "text-red-400";
       case "medium":
-        return "text-yellow-600";
+        return "text-yellow-400";
       case "low":
-        return "text-green-600";
+        return "text-green-400";
       default:
-        return "text-gray-600";
+        return "text-gray-400";
     }
   };
 
@@ -93,35 +95,37 @@ const TaskItem: React.FC<TaskItemProps> = ({
 
   return (
     <>
-      <div className="bg-white border border-gray-200 rounded-lg p-6 shadow-sm hover:shadow-md transition-shadow">
+      <GlassCard className="p-6 transition-all duration-300" hoverEffect>
         <div className="flex items-start justify-between">
           <div className="flex-1 min-w-0">
             {/* Title and Status */}
-            <div className="flex items-center space-x-3 mb-2">
-              <h3 className="text-lg font-medium text-gray-900 truncate">
+            <div className="flex items-center space-x-3 mb-3">
+              <h3 className="text-lg font-semibold text-white truncate group-hover:text-primary transition-colors">
                 {task.title}
               </h3>
               <span
-                className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(
-                  task.status
-                )}`}
+                className={clsx(
+                  "inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border",
+                  getStatusColor(task.status)
+                )}
               >
                 {task.status.replace("_", " ").toUpperCase()}
               </span>
               {task.priority && (
                 <span
-                  className={`text-xs font-medium ${getPriorityColor(
-                    task.priority
-                  )}`}
+                  className={clsx(
+                    "text-xs font-bold tracking-wider",
+                    getPriorityColor(task.priority)
+                  )}
                 >
-                  {task.priority.toUpperCase()} PRIORITY
+                  {task.priority.toUpperCase()}
                 </span>
               )}
             </div>
 
             {/* Description */}
             {task.description && (
-              <p className="text-gray-600 text-sm mb-3 line-clamp-2">
+              <p className="text-gray-400 text-sm mb-4 line-clamp-2">
                 {task.description}
               </p>
             )}
@@ -130,26 +134,27 @@ const TaskItem: React.FC<TaskItemProps> = ({
             <div className="flex flex-wrap items-center gap-4 text-sm text-gray-500">
               {task.due_date && (
                 <div
-                  className={`flex items-center space-x-1 ${
-                    isOverdue(task.due_date) ? "text-red-600" : ""
-                  }`}
+                  className={clsx(
+                    "flex items-center space-x-1.5",
+                    isOverdue(task.due_date) ? "text-red-400" : "text-gray-400"
+                  )}
                 >
                   <CalendarIcon className="h-4 w-4" />
                   <span>{formatDate(task.due_date)}</span>
                   {isOverdue(task.due_date) && (
-                    <span className="text-red-600 font-medium">(Overdue)</span>
+                    <span className="text-red-400 font-medium ml-1">(Overdue)</span>
                   )}
                 </div>
               )}
 
               {task.assigned_to && (
-                <div className="flex items-center space-x-1">
+                <div className="flex items-center space-x-1.5 text-gray-400">
                   <UserIcon className="h-4 w-4" />
-                  <span>Assigned to: {task.assigned_to}</span>
+                  <span>Assigned: {task.assigned_to}</span>
                 </div>
               )}
 
-              <div className="flex items-center space-x-1">
+              <div className="flex items-center space-x-1.5 text-gray-400">
                 <ClockIcon className="h-4 w-4" />
                 <span>Created: {formatDate(task.created_at)}</span>
               </div>
@@ -157,13 +162,13 @@ const TaskItem: React.FC<TaskItemProps> = ({
           </div>
 
           {/* Actions */}
-          <div className="flex items-center space-x-2 ml-4">
+          <div className="flex items-center space-x-3 ml-4">
             {/* Status Update Dropdown */}
             <select
               value={task.status}
               onChange={(e) => updateTaskStatus(e.target.value as TaskStatus)}
               disabled={isUpdatingStatus}
-              className="text-sm border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 disabled:opacity-50"
+              className="text-sm bg-surface/50 border border-white/10 rounded-lg text-gray-300 focus:ring-primary focus:border-primary disabled:opacity-50 transition-colors cursor-pointer hover:bg-surface/80 px-3 py-1.5"
             >
               <option value="todo">To Do</option>
               <option value="in_progress">In Progress</option>
@@ -173,7 +178,7 @@ const TaskItem: React.FC<TaskItemProps> = ({
             {/* Edit Button */}
             <button
               onClick={() => onEdit(task)}
-              className="p-2 text-gray-400 hover:text-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 rounded-md"
+              className="p-2 text-gray-400 hover:text-white hover:bg-white/10 rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-primary/50"
               title="Edit task"
             >
               <PencilIcon className="h-4 w-4" />
@@ -182,14 +187,14 @@ const TaskItem: React.FC<TaskItemProps> = ({
             {/* Delete Button */}
             <button
               onClick={() => setShowDeleteDialog(true)}
-              className="p-2 text-gray-400 hover:text-red-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 rounded-md"
+              className="p-2 text-gray-400 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-red-500/50"
               title="Delete task"
             >
               <TrashIcon className="h-4 w-4" />
             </button>
           </div>
         </div>
-      </div>
+      </GlassCard>
 
       {/* Delete Confirmation Dialog */}
       {showDeleteDialog && (
